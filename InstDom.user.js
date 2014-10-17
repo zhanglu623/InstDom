@@ -107,7 +107,7 @@ function check_event_handler_change(id1, type1, id2, type2) {
 }
 
 function testInsert() {
-	add_script_to_DOM("var MYAPP2 = {};");
+	add_script_to_DOM("var MYAPP = {};");
 	console.log(MYAPP);
 }
 
