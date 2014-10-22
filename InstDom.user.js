@@ -137,27 +137,13 @@ function check_event_handler_change(id1, type1, id2, type2) {
 			}
 
 		}
-
-		// element.ehs = new Object();
-		// element.ehs["click"] = new Object();
-		// element.ehs.click = 1;
-		// console.log("---> " + element);
-	}
-	
-	
+	}	
 	function step1_classify_ehs(target, currEh){
 		if (currEh) {
 			console.log(target.id + "::--->  "
 					+ event_handler_types[eh_type]);
 			console.log(currEh.toString());
-		}
-		
-		
-		
-		
-		
-		
-		
+		}		
 	}
 	
 	function get_element_eh_list(element){
