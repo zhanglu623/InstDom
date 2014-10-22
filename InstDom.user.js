@@ -106,14 +106,7 @@ function check_event_handler_change(id1, type1, id2, type2) {
 			"onkeypress", "onkeyup", "onmousedown", "onmousemove",
 			"onmouseout", "onmouseover", "onmouseup", "onreset", "onresize",
 			"onselect", "onsubmit", "onunload", "onscroll" ];
-	//
-	// console.log("---> " + event_handler_types);
-	//
-	// for (eh in event_handler_types) {
-	// console.log(eh + "::---> " + event_handler_types[eh]);
-	// }
 
-	// traverse all elements in the document
 	var items = document.querySelectorAll("*");
 	var element, i, len = items.length;
 	for (i = 0; i < len; i++) {
