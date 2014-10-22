@@ -17,6 +17,9 @@
 //1. arguments of function 
 //2. we can only handle static html now, because I don't know how to instrument .onclick and let observer triger it
 
+//1. observer create new element(include scripts)
+//2. if sci
+
 //LogNewTagCreations();
 //function LogNewTagCreations() {
 console.log('  <Inst:>Instrumentation start');
@@ -42,9 +45,9 @@ observer.observe(document, {
 	subtree : true
 });
 
-//	window.onload = function(e) {
-//		console.log("window.onload");
-//	}
+// window.onload = function(e) {
+// console.log("window.onload");
+// }
 
 var event1_id = "image1";
 var event1_type = "onclick";
@@ -89,62 +92,172 @@ function getFunction(node, type) {
 	}
 }
 
+// var existing_eventhandler [ element ][handler];
+
 function check_event_handler_change(id1, type1, id2, type2) {
-	MYAPP.flight = {
-		airline : "Oceanic",
-		number : 815,
-		departure : {
-			IATA : "SYD",
-			time : "2004-09-22 14:55",
-			city : "Sydney"
-		},
-		arrival : {
-			IATA : "LAX",
-			time : "2004-09-23 10:42",
-			city : "Los Angeles"
+	// 1. iterate all elements,check the event handlers for all types
+	// 2. if racing element, and also the racing type, then
+	// 3.old event handlers are stored into the object's eh['type'].[index]
+	
+	
+
+	event_handler_types = [ "onclick", "onload", "onabort", "onblur",
+			"onchange", "ondblclick", "onerror", "onfocus", "onkeydown",
+			"onkeypress", "onkeyup", "onmousedown", "onmousemove",
+			"onmouseout", "onmouseover", "onmouseup", "onreset", "onresize",
+			"onselect", "onsubmit", "onunload", "onscroll" ];
+	//
+	// console.log("---> " + event_handler_types);
+	//
+	// for (eh in event_handler_types) {
+	// console.log(eh + "::---> " + event_handler_types[eh]);
+	// }
+
+	// traverse all elements in the document
+	var items = document.querySelectorAll("*");
+	var element, i, len = items.length;
+	for (i = 0; i < len; i++) {
+		element = items[i];
+		element.id = element.identify();
+
+		var currEh;
+		for (eh_type in event_handler_types) {
+			// console.log(element.id+"::---> " + event_handler_types[eh]);
+			switch (event_handler_types[eh_type]) {
+			case "onclick":
+				currEh = element.onclick;
+				step1_classify_ehs(element, currEh);
+				break;
+			case "onload":
+				currEh = element.onload;
+				step1_classify_ehs(element, currEh);
+				break;
+			default:
+
+			}
+
 		}
-	};
-}
 
-function testInsert() {
-	add_script_to_DOM("var MYAPP = {};");
-	console.log(MYAPP);
-}
+		// element.ehs = new Object();
+		// element.ehs["click"] = new Object();
+		// element.ehs.click = 1;
+		// console.log("---> " + element);
+	}
+	
+	
+	function step1_classify_ehs(target, currEh){
+		if (currEh) {
+			console.log(target.id + "::--->  "
+					+ event_handler_types[eh_type]);
+			console.log(currEh.toString());
+		}
+		
+		
+		
+		
+		
+		
+		
+	}
+	
+	function get_element_eh_list(element){
+		if(!element.ehs){
+			element.ehs = new Object();
+		}
+		return element.ehs;
+	}
 
-//	add_script_to_DOM(check_event_handler_change.toString());
+}
+// myVars.event1.id=id1;
+// myVars.event1.type=type1;
+// myVars.event2.id=id2;
+// myVars.event2.type=type2;
+
+// var newly_changed_eventhandler[element][handler];
+// foreach(element){
+// foreach(attribute of element) {
+// if (attribute is "onclick")
+// if (attribute != existing_eventhandler[element]) {
+// newly_changed_eventhandler[element] = attribute;
+// }
+// existing_eventhandler[element] = attribute;
+// }
+// }
+//	
+// foreach (element,handler) in newly_changed_eventhandler {
+// var lu_handler = function () {
+// console.log();
+// }
+// element.onclick = lu_handler;
+// }
+//	
+//
+//		
+//	
+//		
+// var onclick_fn[element]=element.onclick.toString();
+// if(onclick_fn[element]!= onclick_fn_old[element]){
+// instrument onclick_fn[element];
+// }
+//		
+// }
+
+// myVars.stooge = {
+// "first-name" : "Joe",
+// "last-name" : "Howard"
+// };
+// MYAPP.flight = {
+// airline : "Oceanic",
+// number : 815,
+// departure : {
+// IATA : "SYD",
+// time : "2004-09-22 14:55",
+// city : "Sydney"
+// },
+// arrival : {
+// IATA : "LAX",
+// time : "2004-09-23 10:42",
+// city : "Los Angeles"
+// }
+// };
+
+function scripts_first_to_add() {
+	add_script_to_DOM("var myVars = {};");
+	console.log(myVars);
+}
 
 function setFunction(node, type, fn) {
 	// the function that set the event handler of node, type to fn
 	// note that this way only change the attribute of static html, works
 	// for this example
-	//		console.log("setFunction: to node: " + node.id + " , type: " + type
-	//				+ " , function: " + fn);
+	// console.log("setFunction: to node: " + node.id + " , type: " + type
+	// + " , function: " + fn);
 	node.setAttribute(type, fn + "();");
 }
 
 function instrument_fn_e1(fn) {
 	// instrument fn of e1, by making the script content and added it to DOM
 	// return "replace_e1"
-	//		console.log(fn);
-	//		console.log("Instrumented fn of e1: " + fn + "\n");
+	// console.log(fn);
+	// console.log("Instrumented fn of e1: " + fn + "\n");
 	var replace_e1 = "function replace_e1(){" + "var count=0;"
 			+ "var interval1 = setInterval(function() {"
 			+ "console.log('Postpone time: '+ count);count++;"
 			+ "if (event2_executed) {" + "clearInterval(interval1);" + fn + "}"
 			+ "}, 1000);" + "}";
 	add_script_to_DOM(replace_e1);
-	//		console.log(replace_e1);
+	// console.log(replace_e1);
 	return "replace_e1";
 }
 
 function instrument_fn_e2(fn) {
 	// instrument fn of e2, by making the script content and added it to DOM
 	// return "replace_e2"
-	//		console.log("Instrumented fn of e2: " + fn + "\n");
+	// console.log("Instrumented fn of e2: " + fn + "\n");
 	var replace_e2 = "function replace_e2(){" + "event2_executed=true;" + fn
 			+ "}";
 	add_script_to_DOM(replace_e2);
-	//		console.log(replace_e2);
+	// console.log(replace_e2);
 	return "replace_e2";
 }
 
@@ -220,17 +333,21 @@ function handleAddedNodes(nodes) {
 	// iterate all nodes added at one time, it seems the observer is coarse
 	// than we expected
 
-	//	testInsert();
+	// testInsert();
 	[].forEach.call(nodes, function(node) {
 
 		if (node.outerHTML != undefined) {
 			// console.log("----------------------------------------------\nNode:
 			// " + node.identify());
 
-			//			 console.log("Added Node: " + node + " : " + node.outerHTML);
+			// console.log("Added Node: " + node + " : " + node.outerHTML);
 
+			// add to body the instrumented
 			if (node == document.body) {
-				testInsert();
+				scripts_first_to_add();
+				add_script_to_DOM(check_event_handler_change.toString());
+				// check_event_handler_change();
+
 			}
 
 			if (node.getAttribute("onload")) {
@@ -335,7 +452,7 @@ EventTarget.prototype.addEventListener = function(type, fn, capture) {
 // // later, you can stop observing
 // // observer.disconnect();
 console.log('  <Inst:>Instrumentation finish');
-//}
+// }
 // --- Handy injection function.
 
 // function addJS_Node(text, s_URL, funcToRun) {
