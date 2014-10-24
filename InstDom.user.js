@@ -28,10 +28,11 @@ var observer = new MutationObserver(function(mutations) {
 	// console.log("This is " + this);
 	mutations.forEach(function(mutation) {
 		// console.log("-->\n");
-		// console.log("Mutation type: " + mutation.type);
 
-		// if(mutation.type)
-		handleAddedNodes(mutation.addedNodes);
+		if (mutation.type == "childList") {
+			// console.log("Mutation type: " + mutation.type);
+			handleAddedNodes(mutation.addedNodes);
+		}
 		// console.log("\n<--\n");
 	});
 });
@@ -44,6 +45,65 @@ observer.observe(document, {
 	characterDataOldValue : true,
 	subtree : true
 });
+
+var done_insert_first_script = false;
+var count_handleAddedNodes = 0;
+function handleAddedNodes(nodes) {
+
+	// iterate all nodes added at one time, it seems the observer is coarse
+	// than we expected
+	// console.log("---New batch of added elements");
+	// testInsert();
+	count_handleAddedNodes++;
+	// console.log("Batch: -> " + count_handleAddedNodes+ " size: "+
+	// nodes.length);
+
+	[].forEach.call(nodes, function(node) {
+
+		if (node.outerHTML != undefined) {
+
+			// if (node.id) {
+			// console.log("Batch: -> " + count_handleAddedNodes
+			// + " Added Node: " + node + " : " + node.identify());
+			// }
+			// add to body the instrumented
+			if (node == document.body) {
+				// if(!done_insert_first_script)
+				scripts_first_to_add();
+				add_script_to_DOM(check_event_handler_change.toString());
+				// check_event_handler_change();
+				done_insert_first_script = true;
+
+			}
+			// else {
+			// check_event_handler_change();
+			// }
+
+			//
+			// if (node.getAttribute("onload")) {
+			// // console.log("Onload: " + node.getAttribute("onload"));
+			// check_event_listener(node, "onload");
+			//
+			// }
+			// if (node.getAttribute("onclick")) {
+			// // console.log("onclick: " + node.getAttribute("onclick"));
+			// check_event_listener(node, "onclick");
+			// }
+
+			// console.log("\n->parent Node: " + node.parentNode);
+			// if (node.identify()) {
+			// console.log(node.identify());
+			// }
+
+		}
+	});
+
+	if (done_insert_first_script) {
+			 check_event_handler_change();
+	}
+
+	// console.log("---");
+}
 
 // window.onload = function(e) {
 // console.log("window.onload");
@@ -58,6 +118,136 @@ var event2_id = "image2";
 var event2_type = "onclick";
 var event2_function = true;
 
+function check_event_handler_change() {
+	// 1. iterate all elements,check the event handlers for all types
+	// 2. if racing element, and also the racing type, then
+	// 3.old event handlers are stored into the object's eh['type'].[index]
+
+	// console.log("-----start: check_event_handler_change();------");
+
+	// var idid1 = id1;
+	// var idid2 = id2;
+	// var typetype1 = type1;
+	// var typetype2 = type2;
+
+	event_handler_types = [ "onclick", "onload", "onabort", "onblur",
+			"onchange", "ondblclick", "onerror", "onfocus", "onkeydown",
+			"onkeypress", "onkeyup", "onmousedown", "onmousemove",
+			"onmouseout", "onmouseover", "onmouseup", "onreset", "onresize",
+			"onselect", "onsubmit", "onunload", "onscroll" ];
+
+	// for (eh_type_index in event_handler_types) {
+	//		
+	// console.log(event_handler_types[eh_type_index]);
+	// }
+
+	var items = document.querySelectorAll("*");
+	var element, i, len = items.length;
+	for (i = 0; i < len; i++) {
+		element = items[i];
+
+		var curr_eh;
+		for (eh_type_index in event_handler_types) {
+
+			// console.log(event_handler_types[eh_type_index]);
+
+			curr_eh = element[event_handler_types[eh_type_index]];
+			if (curr_eh) {
+//				console.log(element.id + " has ::---> "
+//						+ event_handler_types[eh_type_index]);
+				step1_classify_ehs(element, curr_eh,
+						event_handler_types[eh_type_index]);
+			}
+		}
+	}
+	function step1_classify_ehs(element, curr_eh, eh_type) {
+		// if the object that store the event handlers is null, create one
+		if (!element.ehs) {
+			element.ehs = new Object();
+		}
+
+		// if the old event handler exists
+		if (element.ehs[eh_type]) {
+			var old_eh = element.ehs[eh_type];// old event handler
+
+			if (old_eh == curr_eh.toString()) {
+				// same event handler, do nothing, just return
+				console.log("Same event handler: " + "  id: " + element.id
+						+ "\n" + old_eh);
+			} else {
+				// means the event handler is changed,need to instrument
+
+				console.log("Different old event handler: " + old_eh
+						+ " \n VS \n " + curr_eh.toString());
+				step2_instrument_event_handlers(element, curr_eh, eh_type);
+			}
+		} else {// if the old event handler doesn't exist
+			// need to instrument
+
+			console.log("Empty oldevent handler: " + old_eh + "  VS  "
+					+ curr_eh.toString());
+			step2_instrument_event_handlers(element, curr_eh, eh_type);
+		}
+
+		// at last, update the event handler info stored in each element.
+		//		element.ehs[eh_type] = element[eh_type].toString();
+		//		console.log("Cheched: " + element.id + ":-->  " + eh_type);
+		// console.log(element.ehs.eh_type.toString());
+		// the target has a event handlers
+
+	}
+
+	function step2_instrument_event_handlers(element, curr_eh, eh_type) {
+		//		console.log("----------step2_instrument_event_handlers----------"
+		//				+ eh_type);
+		var old_script = curr_eh.toString();
+		//		console.log("old_script : " + old_script);
+		//
+		// console.log(myVars.event1_id);
+		// console.log(myVars.event1_type);
+		// console.log(myVars.event2_id);
+		// console.log(myVars.event2_type);
+
+		if (element.id == myVars.event1_id) {
+			if (eh_type == myVars.event1_type) {
+				console.log("Racing event 1: " + element + " : " + element.id);
+
+				element[eh_type] = function(event) {
+					curr_eh.call(arguments);
+					console.log("additional code for e1");
+				}
+				element.ehs[eh_type] = element[eh_type].toString();
+				return;
+
+			}
+		} else if (element.id == myVars.event2_id) {
+			if (eh_type == myVars.event2_type) {
+				console.log("Racing event 2: " + element + " : " + element.id);
+
+				element[eh_type] = function(event) {
+					curr_eh.call(arguments);
+					console.log("additional code for e2");
+				}
+				element.ehs[eh_type] = element[eh_type].toString();
+
+				return;
+			}
+		}
+
+		console.log("Other event : " + element + " : " + element.identify());
+		element[eh_type] = function() {
+			curr_eh.call(arguments);
+			console.log("additional code for other events");
+		}
+		element.ehs[eh_type] = element[eh_type].toString();
+
+		// element.onclick=function onclick(event) { replace_e1(); };
+
+	}
+	// console
+	// .log("-----------finish: check_event_handler_change();-----------\n");
+}
+
 function add_script_to_DOM(script_text) {
 	// the function takes in the piece of javascript code as a string, and
 	// added it to the DOM
@@ -68,8 +258,8 @@ function add_script_to_DOM(script_text) {
 	// var code = 'var test111=1;';
 	try {
 
-		console.log("Add the script into the DOM:\n");
-		console.log(script_text);
+		// console.log("Add the script into the DOM:\n");
+		// console.log(script_text);
 
 		s.appendChild(document.createTextNode(script_text));
 		document.body.appendChild(s);
@@ -92,126 +282,38 @@ function getFunction(node, type) {
 	}
 }
 
-// var existing_eventhandler [ element ][handler];
-
-function check_event_handler_change(id1, type1, id2, type2) {
-	// 1. iterate all elements,check the event handlers for all types
-	// 2. if racing element, and also the racing type, then
-	// 3.old event handlers are stored into the object's eh['type'].[index]
-	
-	
-
-	event_handler_types = [ "onclick", "onload", "onabort", "onblur",
-			"onchange", "ondblclick", "onerror", "onfocus", "onkeydown",
-			"onkeypress", "onkeyup", "onmousedown", "onmousemove",
-			"onmouseout", "onmouseover", "onmouseup", "onreset", "onresize",
-			"onselect", "onsubmit", "onunload", "onscroll" ];
-
-	var items = document.querySelectorAll("*");
-	var element, i, len = items.length;
-	for (i = 0; i < len; i++) {
-		element = items[i];
-		element.id = element.identify();
-
-		var currEh;
-		for (eh_type in event_handler_types) {
-			// console.log(element.id+"::---> " + event_handler_types[eh]);
-			switch (event_handler_types[eh_type]) {
-			case "onclick":
-				currEh = element.onclick;
-				step1_classify_ehs(element, currEh);
-				break;
-			case "onload":
-				currEh = element.onload;
-				step1_classify_ehs(element, currEh);
-				break;
-			default:
-
-			}
-
-		}
-	}	
-	function step1_classify_ehs(target, currEh){
-		if (currEh) {
-			console.log(target.id + "::--->  "
-					+ event_handler_types[eh_type]);
-			console.log(currEh.toString());
-		}		
-	}
-	
-	function get_element_eh_list(element){
-		if(!element.ehs){
-			element.ehs = new Object();
-		}
-		return element.ehs;
-	}
-
-}
-// myVars.event1.id=id1;
-// myVars.event1.type=type1;
-// myVars.event2.id=id2;
-// myVars.event2.type=type2;
-
-// var newly_changed_eventhandler[element][handler];
-// foreach(element){
-// foreach(attribute of element) {
-// if (attribute is "onclick")
-// if (attribute != existing_eventhandler[element]) {
-// newly_changed_eventhandler[element] = attribute;
-// }
-// existing_eventhandler[element] = attribute;
-// }
-// }
-//	
-// foreach (element,handler) in newly_changed_eventhandler {
-// var lu_handler = function () {
-// console.log();
-// }
-// element.onclick = lu_handler;
-// }
-//	
-//
-//		
-//	
-//		
-// var onclick_fn[element]=element.onclick.toString();
-// if(onclick_fn[element]!= onclick_fn_old[element]){
-// instrument onclick_fn[element];
-// }
-//		
-// }
-
-// myVars.stooge = {
-// "first-name" : "Joe",
-// "last-name" : "Howard"
-// };
-// MYAPP.flight = {
-// airline : "Oceanic",
-// number : 815,
-// departure : {
-// IATA : "SYD",
-// time : "2004-09-22 14:55",
-// city : "Sydney"
-// },
-// arrival : {
-// IATA : "LAX",
-// time : "2004-09-23 10:42",
-// city : "Los Angeles"
-// }
-// };
-
 function scripts_first_to_add() {
-	add_script_to_DOM("var myVars = {};");
+	add_script_to_DOM("var myVars = {};" + "myVars.event1_id = \"image1\";"
+			+ "myVars.event1_type = \"onclick\";"
+			+ "myVars.event2_id = \"image2\";"
+			+ "myVars.event2_type = \"onclick\";");
+
 	console.log(myVars);
 }
 
-function setFunction(node, type, fn) {
+function setFunction(node, type, fn, eh_type) {
 	// the function that set the event handler of node, type to fn
 	// note that this way only change the attribute of static html, works
 	// for this example
-	// console.log("setFunction: to node: " + node.id + " , type: " + type
-	// + " , function: " + fn);
-	node.setAttribute(type, fn + "();");
+	// .addEventListener is totally isolated from html or .onclick
+
+	// image2.setAttribute("onclick","test2();") will always change the element
+	// attribute
+	// but only set the .onclick when .onclick is empty, if not, it will only
+	// change the html, but not .onclick
+
+	// .onclick will always change .onclick
+	//
+
+	console.log("setFunction: to node: " + node.id + " , type: " + type
+			+ " , function: " + fn);
+	if (eh_type == "html") {
+		node.setAttribute(type, fn + "();");
+	} else if (eh_type == "element_dot_type") {
+
+	} else if (eh_type == "addEventListener") {
+
+	}
 }
 
 function instrument_fn_e1(fn) {
@@ -251,41 +353,6 @@ function check_event_listener(node, type) {
 	// 5. element.bind()...
 	// 6. element.addEventListner...
 
-	// if (node.id == event1_id) {
-	//
-	// // var observer3 = new MutationObserver(function(mutations) {
-	// // // console.log("This is " + this);
-	// // mutations.forEach(function(mutation) {
-	// // // console.log("-->\n");
-	// // console.log("Mutation type: " + mutation.type);
-	// //
-	// // // if(mutation.type)
-	// // // handleAddedNodes(mutation.addedNodes);
-	// // // console.log("\n<--\n");
-	// // });
-	// // });
-	// //
-	// // observer3.observe(node, {
-	// // childList : true,
-	// // attributes : true,
-	// // characterData : true,
-	// // attributeOldValue : true,
-	// // characterDataOldValue : true,
-	// // subtree : true
-	// // });
-	// // console.log("observer3: ", observer3);
-	// //
-	// // node.setAttribute("onclick", "test1();");
-	// //
-	// // node.onclick = function() {
-	// // console.log("test observer 3");
-	// // };
-	//
-	// Event.observe(node, 'click', function(event) {
-	// console.log("test observer 4");
-	// });
-	// }
-
 	if (node.id == event1_id) {
 		if (type == event1_type) {
 			// console.log("Added Node: " + node + " : " + node.outerHTML);
@@ -293,7 +360,7 @@ function check_event_listener(node, type) {
 			console.log("Event 1 match!");
 			var fn = getFunction(node, type);
 			var newFn = instrument_fn_e1(fn);
-			setFunction(node, type, newFn);
+			setFunction(node, type, newFn, "html");
 
 		}
 	} else if (node.id == event2_id) {
@@ -302,50 +369,10 @@ function check_event_listener(node, type) {
 			console.log("Event 2 match!");
 			var fn = getFunction(node, type);
 			var newFn = instrument_fn_e2(fn);
-			setFunction(node, type, newFn);
+			setFunction(node, type, newFn, "html");
 		}
 	}
 
-}
-
-function handleAddedNodes(nodes) {
-	// iterate all nodes added at one time, it seems the observer is coarse
-	// than we expected
-
-	// testInsert();
-	[].forEach.call(nodes, function(node) {
-
-		if (node.outerHTML != undefined) {
-			// console.log("----------------------------------------------\nNode:
-			// " + node.identify());
-
-			// console.log("Added Node: " + node + " : " + node.outerHTML);
-
-			// add to body the instrumented
-			if (node == document.body) {
-				scripts_first_to_add();
-				add_script_to_DOM(check_event_handler_change.toString());
-				// check_event_handler_change();
-
-			}
-
-			if (node.getAttribute("onload")) {
-				// console.log("Onload: " + node.getAttribute("onload"));
-				check_event_listener(node, "onload");
-
-			}
-			if (node.getAttribute("onclick")) {
-				// console.log("onclick: " + node.getAttribute("onclick"));
-				check_event_listener(node, "onclick");
-			}
-
-			// console.log("\n->parent Node: " + node.parentNode);
-			// if (node.identify()) {
-			// console.log(node.identify());
-			// }
-
-		}
-	});
 }
 
 //
