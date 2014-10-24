@@ -241,6 +241,7 @@ function check_event_handler_change() {
 		}
 		element.ehs[eh_type] = element[eh_type].toString();
 		// element.onclick=function onclick(event) { replace_e1(); };
+		
 	}
 	// console
 	// .log("-----------finish: check_event_handler_change();-----------\n");
