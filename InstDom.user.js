@@ -240,7 +240,6 @@ function check_event_handler_change() {
 			console.log("additional code for other events");
 		}
 		element.ehs[eh_type] = element[eh_type].toString();
- 
 		// element.onclick=function onclick(event) { replace_e1(); };
 
 	}
